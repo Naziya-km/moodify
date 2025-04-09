@@ -1,34 +1,32 @@
 import streamlit as st
 import cv2
 from mood_predictor import predict_emotion
+from spotify_helper import get_song_for_mood
 
-st.title("Moodify - Real-time Mood Detection")
+st.set_page_config(page_title="Moodify", layout="centered")
+st.title("🧠 Moodify - Your Mood-Based Music Recommender")
 
-frame_placeholder = st.empty()
-
-# Capture video from webcam
+# Capture image
 cap = cv2.VideoCapture(0)
+st.text("Capturing image... please allow webcam")
 
-if not cap.isOpened():
-    st.error("Webcam not found.")
-else:
-    st.success("Webcam connected!")
-
-while True:
+if cap.isOpened():
     ret, frame = cap.read()
-    if not ret:
-        st.warning("Failed to capture frame")
-        break
+    cap.release()
 
-    # Predict emotion
-    emotion = predict_emotion(frame)
+    if ret:
+        st.image(frame, caption="Captured Frame", channels="BGR")
+        emotion = predict_emotion(frame)
+        st.success(f"Detected Mood: {emotion}")
 
-    # Overlay emotion on frame
-    cv2.putText(frame, f'Emotion: {emotion}', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 
-                1, (0, 255, 0), 2, cv2.LINE_AA)
-
-    # Convert color and display
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame_placeholder.image(frame_rgb, channels="RGB")
-
-cap.release()
+        # Suggest song
+        song = get_song_for_mood(emotion)
+        if song:
+            st.subheader("🎵 Suggested Song Based on Mood:")
+            st.markdown(f"[{song['name']} by {song['artist']}]({song['url']})")
+        else:
+            st.warning("Could not find a suitable song on Spotify.")
+    else:
+        st.error("Failed to capture image.")
+else:
+    st.error("Webcam not accessible.")
